@@ -1,4 +1,4 @@
-#Introduction
+# Introduction
 
 lua-resty-rabbitmq - Lua RabbitMQ client library which uses cosocket api for
 communication over STOMP 1.2 with a RabbitMQ broker which has the STOMP plugin.
@@ -88,3 +88,67 @@ delivery mode and other header using the SEND command:
     hello^@
 
 Note that content-length includes the message and EOL byte.
+
+## API Documentation
+
+TODO: FIXME once API spec if finalized
+
+## Example
+
+A simple producer that can send reliable persistent message to an exchange with
+some binding with publisher confirms:
+
+    local rabbitmq = require "resty.rabbitmq"
+
+    local mq, err = rabbitmq:new()
+    if not mq then
+          return
+    end
+
+    mq:set_timeout(5000)
+
+    local ok, err = mq:connect {
+                        host = "127.0.0.1",
+                        port = 61613,
+                        username = "guest",
+                        password = "guest",
+                        vhost = "/"
+                    }
+
+    if not ok then
+        return
+    end
+
+    local msg = "{'a': 'test'}"
+    local exchange = "test"
+    local binding = "binding"
+    local app_id = "luaresty"
+    local persistent = "true"
+    local content_type = "application/json"
+
+    local ok, err = mq:send(msg, exchange, binding, app_id, persistent, content_type)
+    if not ok then
+        return
+    end
+
+    local ok, err = mq:confirm()
+    if not ok then
+        return
+    end
+
+    local ok, err = mq:set_keepalive(0, 10000)
+    if not ok then
+        return
+    end
+
+# Contact
+
+Author: Rohit Yadav ([bhaisaab](mailto:bhaisaab@apache.org))
+
+You may drop an email to the author or contact the [openresty google group](https://groups.google.com/forum/?fromgroups#!forum/openresty-en).
+
+# Copyright and License
+
+This module is licensed under the MIT license.
+
+FIXME: add header.
