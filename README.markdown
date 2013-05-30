@@ -161,15 +161,15 @@ some binding with publisher confirms:
 - Write tests
 - Fix all FIXMEs in the code
 
-# Contact
+# Author
 
-Author: Rohit Yadav ([bhaisaab](mailto:bhaisaab@apache.org))
+Rohit "[bhaisaab](http://bhaisaab.org)" Yadav, bhaisaab@baagi.org
 
 # Copyright and License
 
 This module is licensed under the MIT license.
 
-Copyright 2013 Rohit 'bhaisaab' Yadav, [Wingify](http://engineering.wingify.com/opensource)
+Copyright 2013 Rohit "[bhaisaab](http://bhaisaab.org)" Yadav, [Wingify](http://engineering.wingify.com/opensource)
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
