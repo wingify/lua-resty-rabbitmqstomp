@@ -1,4 +1,4 @@
--- lua-resty-rabbitmq: Opinionated RabbitMQ STOMP v1.2 client lib
+-- lua-resty-rabbitmq: Opinionated RabbitMQ (STOMP) client lib
 -- Copyright (C) 2013 Rohit Yadav (bhaisaab), Wingify
 -- Opensourced at Wingify in New Delhi under the MIT License
 
@@ -7,7 +7,6 @@ local len = string.len
 local concat = table.concat
 local setmetatable = setmetatable
 local error = error
-local ngx = require "ngx"
 
 module(...)
 
@@ -30,7 +29,6 @@ end
 function set_timeout(self, timeout)
     local sock = self.sock
     if not sock then
-        --ngx.log(ngx.ERR, "TIMEOUT ERROR")
         return nil, "not initialized"
     end
 
@@ -177,17 +175,27 @@ function get_reused_times(self)
 end
 
 
+function _logout(self)
+    local sock = self.sock
+    if not sock then
+        return nil, "not initialized"
+    end
+
+    self.state = nil
+    if not self.state ~= STATE_CONNECTED then
+        return sock:send("DISCONNECT\x0d\x0a\x00\x0d\x0a")
+    end
+    return nil, "not connected"
+end
+
 function close(self)
     local sock = self.sock
     if not sock then
         return nil, "not initialized"
     end
 
-    if not self.state ~= STATE_CONNECTED then
-        sock:send("DISCONNECT\x0d\x0a\x00\x0d\x0a")
-    end
+    _logout(self)
 
-    self.state = nil
     return sock:close()
 end
 
