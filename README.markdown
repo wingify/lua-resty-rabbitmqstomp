@@ -163,7 +163,7 @@ some binding with publisher confirms:
 
 # Author
 
-Rohit "[bhaisaab](http://bhaisaab.org)" Yadav, bhaisaab@baagi.org
+Rohit "[bhaisaab](http://bhaisaab.org)" Yadav, rohit.yadav@wingify.com
 
 # Copyright and License
 
