@@ -38,12 +38,6 @@ function publish()
         return
     end
 
-    local ok, err = mq:confirm()
-    if not ok then
-        ngx.log(ngx.ERR, "MSG CONFIRMS ERROR: " .. err)
-        return publish()
-    end
-
     local ok, err = mq:set_keepalive(0, 1000)
     if not ok then
         ngx.log(ngx.ERR, "KEEPALIVE ERROR: " .. err)

@@ -1,5 +1,5 @@
 -- lua-resty-rabbitmq: Opinionated RabbitMQ (STOMP) client lib
--- Copyright (C) 2013 Rohit Yadav (bhaisaab), Wingify
+-- Copyright (C) 2013 Rohit 'bhaisaab' Yadav, Wingify
 -- Opensourced at Wingify in New Delhi under the MIT License
 
 local tcp = ngx.socket.tcp

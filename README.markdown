@@ -10,8 +10,13 @@ may be addressed in future;
 
 - RabbitMQ server should have the STOMP adapter enabled that supports STOMP v1.2
 - Assumption that users, vhost, exchanges, queues and bindings are already setup
-- In the first version our aim to implement an extensible library with persistent
-publishing semantics and heartbeat
+- In the first version our aim to implement a client library with persistent
+publishing to an exchange with some binding and handle RECEIPTs, the focus would
+be to reuse sockets using cosocktcp sockets.
+
+# Status
+
+This library is under development.
 
 # STOMP v1.2 Client Implementation
 
@@ -89,9 +94,23 @@ delivery mode and other header using the SEND command:
 
 Note that content-length includes the message and EOL byte.
 
-## API Documentation
+## Methods
 
-TODO: FIXME once API spec if finalized
+FIXME: Add docs on methods
+
+### new
+
+### set_timeout
+
+### connect
+
+### send
+
+### get_reused_times
+
+### set_keepalive
+
+### close
 
 ## Example
 
@@ -105,7 +124,7 @@ some binding with publisher confirms:
           return
     end
 
-    mq:set_timeout(5000)
+    mq:set_timeout(1000)
 
     local ok, err = mq:connect {
                         host = "127.0.0.1",
@@ -131,24 +150,48 @@ some binding with publisher confirms:
         return
     end
 
-    local ok, err = mq:confirm()
-    if not ok then
-        return
-    end
-
     local ok, err = mq:set_keepalive(0, 10000)
     if not ok then
         return
     end
 
+# TODO
+
+- Fix README docs
+- Write tests
+- Fix all FIXMEs in the code
+
 # Contact
 
 Author: Rohit Yadav ([bhaisaab](mailto:bhaisaab@apache.org))
-
-You may drop an email to the author or contact the [openresty google group](https://groups.google.com/forum/?fromgroups#!forum/openresty-en).
 
 # Copyright and License
 
 This module is licensed under the MIT license.
 
-FIXME: add header.
+Copyright 2013 Rohit 'bhaisaab' Yadav, [Wingify](http://engineering.wingify.com/opensource)
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+# See Also
+
+- [STOMP 1.2 Spec](http://stomp.github.io/stomp-specification-1.2.html)
+- The [lua-resty-mysql](https://github.com/agentzh/lua-resty-mysql) library
+- [Openresty google group](https://groups.google.com/forum/?fromgroups#!forum/openresty-en)
