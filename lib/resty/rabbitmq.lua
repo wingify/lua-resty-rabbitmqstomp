@@ -56,7 +56,7 @@ function _login(self, user, passwd, vhost)
 
     self.state = STATE_CONNECTED
     -- FIXME: Check CONNECTION frame for errors etc.
-    local resp = sock:receiveuntil("\x00")
+    local resp = sock:receiveuntil("\x00", {inclusive = true})
     local data, err, partial = resp()
     return ok, data
 end
@@ -130,17 +130,12 @@ function send(self, msg, exchange, binding, app_id, persistence, content_type)
                 "content-type:" .. content_type .. "\x0d\x0a" ..
                 "\x0d\x0a" ..
                 msg .. "\x0d\x0a\x0d\x0a\x00\x0d\x0a"
-    return sock:send(req)
-end
-
-
-function confirm(self)
-    local sock = self.sock
-    if not sock then
-        return nil, "not initialized"
+    local ok, err = sock:send(req)
+    if not ok then
+        return nil, err
     end
-
-    local resp = sock:receiveuntil("\x00")
+    -- FIXME: Check resp has RECEIPT
+    local resp = sock:receiveuntil("\x00", {inclusive = true})
     local data, err, partial = resp()
     if data ~= nil then
         return 1, data
@@ -183,21 +178,17 @@ function _logout(self)
     end
 
     self.state = nil
-    if not self.state ~= STATE_CONNECTED then
-        return sock:send("DISCONNECT\x0d\x0a\x00\x0d\x0a")
+    if self.state == STATE_CONNECTED then
+        -- Graceful shutdown
+        sock:send("DISCONNECT\x0d\x0areceipt:0\x0d\x0a\x0d\x0a\x00\x0d\x0a")
+        sock:receive("*a")
     end
-    return nil, "not connected"
+    return sock:close()
 end
 
+
 function close(self)
-    local sock = self.sock
-    if not sock then
-        return nil, "not initialized"
-    end
-
-    _logout(self)
-
-    return sock:close()
+    return _logout(self)
 end
 
 
