@@ -47,6 +47,7 @@ function _login(self, user, passwd, vhost)
                 "login:" .. user .. "\x0d\x0a" ..
                 "passcode:" .. passwd .. "\x0d\x0a" ..
                 "host:" .. vhost .. "\x0d\x0a" ..
+                "heart-beat:0,0\x0d\x0a" ..
                 "\x0d\x0a\x00\x0d\x0a"
     local ok, err = sock:send(req)
     if not ok then
