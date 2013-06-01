@@ -1,6 +1,6 @@
 # Introduction
 
-lua-resty-rabbitmq - Lua RabbitMQ client library which uses cosocket api for
+lua-resty-rabbitmqstomp - Lua RabbitMQ client library which uses cosocket api for
 communication over STOMP 1.2 with a RabbitMQ broker which has the STOMP plugin.
 
 # Limitations
@@ -10,13 +10,11 @@ may be addressed in future;
 
 - RabbitMQ server should have the STOMP adapter enabled that supports STOMP v1.2
 - Assumption that users, vhost, exchanges, queues and bindings are already setup
-- In the first version our aim to implement a client library with persistent
-publishing to an exchange with some binding and handle RECEIPTs, the focus would
-be to reuse sockets using cosocktcp sockets.
 
 # Status
 
-This library is under development.
+This library is considered production ready for publishing reliable messages to
+RabbitMQ.
 
 # STOMP v1.2 Client Implementation
 
@@ -96,35 +94,122 @@ Note that content-length includes the message and EOL byte.
 
 ## Methods
 
-FIXME: Add docs on methods
-
 ### new
+
+`syntax: rabbit, err = rabbitmqstomp:new()`
+
+Creates a RabbitMQ object. In case of failures, returns nil and a string describing the error.
 
 ### set_timeout
 
+`syntax: rabbit:set_timeout(time)`
+
+Sets the timeout (in ms) protection for subsequent operations, including the connect method.
+Note timeout should be set before calling any other method after creating the object.
+
 ### connect
+
+`syntax: ok, err = red:connect{host=host, port=port, username=username, password=password, vhost=vhost}`
+
+Attempts to connect to a stomp broker the RabbitMQ STOMP adapter on a host, port is listening on.
+
+If none of the values are supplied default values are assumed:
+
+- host: localhost
+- port: 61613
+- username: guest
+- password: guest
+- vhost: /
+
+`pool` can be given to be used for a custom name for the connection pool being used.
 
 ### send
 
+`syntax: rabbit:send(msg, headers)`
+
+Publishers message with a set of headers.
+
+Some header values which can be set:
+
+`destination`: Destination of the message, for example /exchange/name/binding`
+`persistent`: To delivery a persistent message, value should be "true" if declared
+`receipt`: Receipt for confirmed delivery
+`content-type`: Type of message, for example application/json
+
+For list of supported headers see the STOMP protocol extensions and
+restriction page: `https://www.rabbitmq.com/stomp.html`
+
+### subscribe
+
+`syntax: rabbit:subscribe(headers)`
+
+Subscribe to a queue by using `headers`. It should have a id when persistent is
+true. On successful subscription MESSAGE frames are sent by the broker.
+
+### unsubscribe
+
+`syntax: rabbit:unsubscribe(headers)`
+
+Unsubscribes from a queue by using `headers`.
+On successful unsubscription MESSAGE frames will stop coming from the broker.
+
+### receive
+
+`syntax: rabbit:receive())`
+
+Tries to read any MESSAGE frames received and returns the message. Trying to receive
+without a valid subscription will lead to errors.
+
 ### get_reused_times
+
+`syntax: times, err = rabbit:get_reused_times()`
+
+This method returns the (successfully) reused times for the current connection.
+In case of error, it returns nil and a string describing the error.
+
+If the current connection does not come from the built-in connection pool, then
+this method always returns 0, that is, the connection has never been reused
+(yet). If the connection comes from the connection pool, then the return value
+is always non-zero. So this method can also be used to determine if the current
+connection comes from the pool.
 
 ### set_keepalive
 
+`syntax: ok, err = rabbit:set_keepalive(max_idle_timeout, pool_size)`
+
+Puts the current RabbitMQ connection immediately into the ngx_lua cosocket connection pool.
+
+You can specify the max idle timeout (in ms) when the connection is in the pool
+and the maximal size of the pool every nginx worker process.
+
+In case of success, returns 1. In case of errors, returns nil with a string describing the error.
+
+Only call this method in the place you would have called the close method
+instead. Calling this method will immediately turn the current redis object into
+the closed state. Any subsequent operations other than connect() on the current
+objet will return the closed error.
+
 ### close
+
+`syntax: ok, err = rabbit:close()`
+
+Closes the current RabbitMQ connection gracefully by sending a DISCONNECT to the
+RabbitMQ STOMP broker and returns the status.
+
+In case of success, returns 1. In case of errors, returns nil with a string describing the error.
 
 ## Example
 
 A simple producer that can send reliable persistent message to an exchange with
-some binding with publisher confirms:
+some binding:
 
-    local rabbitmq = require "resty.rabbitmq"
-
+    local rabbitmq = require "resty.rabbitmqstomp"
     local mq, err = rabbitmq:new()
     if not mq then
           return
     end
 
-    mq:set_timeout(1000)
+    mq:set_timeout(10000)
 
     local ok, err = mq:connect {
                         host = "127.0.0.1",
@@ -133,33 +218,52 @@ some binding with publisher confirms:
                         password = "guest",
                         vhost = "/"
                     }
-
     if not ok then
         return
     end
 
-    local msg = "{'a': 'test'}"
-    local exchange = "test"
-    local binding = "binding"
-    local app_id = "luaresty"
-    local persistent = "true"
-    local content_type = "application/json"
+    local strlen =  string.len
 
-    local ok, err = mq:send(msg, exchange, binding, app_id, persistent, content_type)
+    local msg = "{'key': 'value'}"
+    local headers = {}
+    headers["destination"] = "/exchange/test/binding"
+    headers["receipt"] = "msg#1"
+    headers["app-id"] = "luaresty"
+    headers["persistent"] = "true"
+    headers["content-type"] = "application/json"
+
+    local ok, err = mq:send(msg, headers)
+    if not ok then
+        return
+    end
+    ngx.log(ngx.INFO, "Published: " .. msg)
+
+    local headers = {}
+    headers["destination"] = "/amq/queue/queuename"
+    headers["persistent"] = "true"
+    headers["id"] = "123"
+
+    local ok, err = mq:subscribe(headers)
     if not ok then
         return
     end
 
-    local ok, err = mq:set_keepalive(0, 10000)
+    local data, err = mq:receive()
     if not ok then
         return
     end
+    ngx.log(ngx.INFO, "Consumed: " .. data)
 
-# TODO
+    local headers = {}
+    headers["persistent"] = "true"
+    headers["id"] = "123"
 
-- Fix README docs
-- Write tests
-- Fix all FIXMEs in the code
+    local ok, err = mq:unsubscribe(headers)
+
+    local ok, err = mq:set_keepalive(10000, 10000)
+    if not ok then
+        return
+    end
 
 # Author
 
