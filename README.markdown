@@ -109,7 +109,7 @@ Note timeout should be set before calling any other method after creating the ob
 
 ### connect
 
-`syntax: ok, err = red:connect{host=host, port=port, username=username, password=password, vhost=vhost}`
+`syntax: ok, err = rabbit:connect{host=host, port=port, username=username, password=password, vhost=vhost}`
 
 Attempts to connect to a stomp broker the RabbitMQ STOMP adapter on a host, port is listening on.
 
@@ -127,11 +127,11 @@ If none of the values are supplied default values are assumed:
 
 `syntax: rabbit:send(msg, headers)`
 
-Publishers message with a set of headers.
+Publishers message with a set of headers. Note msg should be a string.
 
 Some header values which can be set:
 
-`destination`: Destination of the message, for example /exchange/name/binding`
+`destination`: Destination of the message, for example /exchange/name/binding
 `persistent`: To delivery a persistent message, value should be "true" if declared
 `receipt`: Receipt for confirmed delivery
 `content-type`: Type of message, for example application/json
@@ -155,7 +155,7 @@ On successful unsubscription MESSAGE frames will stop coming from the broker.
 
 ### receive
 
-`syntax: rabbit:receive())`
+`syntax: rabbit:receive()`
 
 Tries to read any MESSAGE frames received and returns the message. Trying to receive
 without a valid subscription will lead to errors.
@@ -203,7 +203,10 @@ In case of success, returns 1. In case of errors, returns nil with a string desc
 A simple producer that can send reliable persistent message to an exchange with
 some binding:
 
+    local strlen =  string.len
+    local cjson = require "cjson"
     local rabbitmq = require "resty.rabbitmqstomp"
+
     local mq, err = rabbitmq:new()
     if not mq then
           return
@@ -222,9 +225,7 @@ some binding:
         return
     end
 
-    local strlen =  string.len
-
-    local msg = "{'key': 'value'}"
+    local msg = {key="value1", key2="value2"}
     local headers = {}
     headers["destination"] = "/exchange/test/binding"
     headers["receipt"] = "msg#1"
@@ -232,7 +233,7 @@ some binding:
     headers["persistent"] = "true"
     headers["content-type"] = "application/json"
 
-    local ok, err = mq:send(msg, headers)
+    local ok, err = mq:send(cjson.encode(msg), headers)
     if not ok then
         return
     end
@@ -265,9 +266,20 @@ some binding:
         return
     end
 
+# TODO
+
+- Write tests
+- Check and parse replies from broker
+
 # Author
 
 Rohit "[bhaisaab](http://bhaisaab.org)" Yadav, rohit.yadav@wingify.com
+
+# Contributing
+
+Send a pull request on `https://github.com/wingify/lua-resty-rabbitmqstomp`
+
+You may contact the author and the [Openresty community](https://groups.google.com/forum/?fromgroups#!forum/openresty-en)
 
 # Copyright and License
 
