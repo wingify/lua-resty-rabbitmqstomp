@@ -93,7 +93,10 @@ function _receive_frame(self)
 end
 
 
-function _login(self, user, passwd, vhost)
+function login(self, user, passwd, vhost)
+    
+    if self.state == STATE_CONNECTED then return 1 end
+    
     local headers = {}
     headers["accept-version"] = "1.2"
     headers["login"] = user
@@ -116,7 +119,6 @@ function _logout(self)
         return nil, "not initialized"
     end
 
-    self.state = nil
     if self.state == STATE_CONNECTED then
         -- Graceful shutdown
         local headers = {}
@@ -128,54 +130,16 @@ function _logout(self)
 end
 
 
-function connect(self, opts)
+function connect(self, ...)
+
     local sock = self.sock
+
     if not sock then
         return nil, "not initialized"
     end
 
-    local host = opts.host
-    if not host then
-        host = "127.0.0.1"
-    end
-
-    local port = opts.port
-    if not port then
-        port = 61613  -- stomp port
-    end
-
-    local username = opts.username
-    if not username then
-        username = "guest"
-    end
-
-    local password = opts.password
-    if not password then
-        password = "guest"
-    end
-
-    local vhost = opts.vhost
-    if not vhost then
-        vhost = "/"
-    end
-
-    local pool = opts.pool
-    if not pool then
-        pool = concat({username, vhost, host, port}, ":")
-    end
-
-    local ok, err = sock:connect(host, port, { pool = pool })
-    if not ok then
-        return nil, "failed to connect: " .. err
-    end
-
-    local reused = sock:getreusedtimes()
-    if reused and reused > 0 then
-        self.state = STATE_CONNECTED
-        return 1
-    end
-
-    return _login(self, username, password, vhost)
+    return sock:connect(...)
+    
 end
 
 
