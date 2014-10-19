@@ -96,9 +96,15 @@ Note that content-length includes the message and EOL byte.
 
 ### new
 
-`syntax: rabbit, err = rabbitmqstomp:new()`
+`syntax: rabbit, err = rabbitmqstomp:new({username = username,password = password, vost = vhost} )`
 
 Creates a RabbitMQ object. In case of failures, returns nil and a string describing the error.
+
+If nil table is supplied default values will be assumed on login:
+
+- username: guest
+- password: guest
+- vhost: /
 
 ### set_timeout
 
@@ -109,19 +115,9 @@ Note timeout should be set before calling any other method after creating the ob
 
 ### connect
 
-`syntax: ok, err = rabbit:connect{host=host, port=port, username=username, password=password, vhost=vhost}`
+`syntax: ok, err = rabbit:connect(host,port)`
 
 Attempts to connect to a stomp broker the RabbitMQ STOMP adapter on a host, port is listening on.
-
-If none of the values are supplied default values are assumed:
-
-- host: localhost
-- port: 61613
-- username: guest
-- password: guest
-- vhost: /
-
-`pool` can be given to be used for a custom name for the connection pool being used.
 
 ### send
 
@@ -198,7 +194,8 @@ RabbitMQ STOMP broker and returns the status.
 
 In case of success, returns 1. In case of errors, returns nil with a string describing the error.
 
-## Example
+## Examples
+
 
 A simple producer that can send reliable persistent message to an exchange with
 some binding:
@@ -206,21 +203,22 @@ some binding:
     local strlen =  string.len
     local cjson = require "cjson"
     local rabbitmq = require "resty.rabbitmqstomp"
-
-    local mq, err = rabbitmq:new()
+   
+     
+    local opts = { username = "guest",
+                   password = "guest",
+                   vhost = "/" }
+ 
+    local mq, err = rabbitmq:new(opts)
+    
     if not mq then
           return
     end
 
     mq:set_timeout(10000)
 
-    local ok, err = mq:connect {
-                        host = "127.0.0.1",
-                        port = 61613,
-                        username = "guest",
-                        password = "guest",
-                        vhost = "/"
-                    }
+    local ok, err = mq:connect("127.0.0.1",61613) 
+    
     if not ok then
         return
     end
@@ -266,6 +264,40 @@ some binding:
         return
     end
 
+### resty-upstream pool example
+
+	local cjson = require "cjson"
+    local rabbitmq = require "resty.rabbitmqstomp"
+    
+	local mq, err = rabbitmq:new()
+	
+	if not mq then
+		return nil, err
+	end
+	
+	local mq, info = upstream_pool:connect(mq)
+		
+	if not mq then
+		return nil, info
+	end
+	
+	local msg = {key="value1", key2="value2"}
+    local headers = {}
+    headers["destination"] = "/exchange/test/binding"
+    headers["receipt"] = "msg#1"
+    headers["app-id"] = "luaresty"
+    headers["persistent"] = "true"
+    headers["content-type"] = "application/json"
+    
+	local ok, err = mq:send(cjson.encode(msg), headers)
+		
+	if not ok then
+		return nil, err
+	end
+	
+	ok, err = mq:set_keepalive(info.pool.keepalive_timeout,info.pool.keepalive_pool)
+	
+	
 # TODO
 
 - Write tests
@@ -309,5 +341,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # See Also
 
 - [STOMP 1.2 Spec](http://stomp.github.io/stomp-specification-1.2.html)
+- The [resty-upstream](https://github.com/hamishforbes/lua-resty-upstream) library
 - The [lua-resty-mysql](https://github.com/agentzh/lua-resty-mysql) library
 - [Openresty google group](https://groups.google.com/forum/?fromgroups#!forum/openresty-en)
