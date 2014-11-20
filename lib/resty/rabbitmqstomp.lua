@@ -26,12 +26,18 @@ local STATE_CONNECTED = 1
 local STATE_COMMAND_SENT = 2
 
 
-function new(self)
+function new(self, opts)
     local sock, err = tcp()
     if not sock then
         return nil, err
     end
-    return setmetatable({ sock = sock }, mt)
+    
+    if opts == nil then
+	opts = {username = "guest", password = "guest", vhost = "/"}
+    end
+     
+    return setmetatable({ sock = sock, opts = opts}, mt)
+
 end
 
 
@@ -93,15 +99,13 @@ function _receive_frame(self)
 end
 
 
-function login(self, user, passwd, vhost)
-    
-    if self.state == STATE_CONNECTED then return 1 end
+function _login(self)
     
     local headers = {}
     headers["accept-version"] = "1.2"
-    headers["login"] = user
-    headers["passcode"] = passwd
-    headers["host"] = vhost
+    headers["login"] = self.opts.user
+    headers["passcode"] = self.opts.password
+    headers["host"] = self.opts.vhost
 
     local ok, err = _send_frame(self, _build_frame(self, "CONNECT", headers, nil))
     if not ok then
@@ -116,6 +120,7 @@ end
 function _logout(self)
     local sock = self.sock
     if not sock then
+	self.state = nil
         return nil, "not initialized"
     end
 
@@ -126,6 +131,7 @@ function _logout(self)
         sock:send(_build_frame(self, "DISCONNECT", headers, nil))
         sock:receive("*a")
     end
+    self.state = nil
     return sock:close()
 end
 
@@ -138,8 +144,20 @@ function connect(self, ...)
         return nil, "not initialized"
     end
 
-    return sock:connect(...)
+    local ok, err = sock:connect(...)
     
+    if not ok then
+        return nil, "failed to connect: " .. err
+    end
+    
+    local reused = sock:getreusedtimes()
+    if reused and reused > 0 then
+        self.state = STATE_CONNECTED
+        return 1
+    end
+    
+    return _login(self)
+
 end
 
 
@@ -211,7 +229,7 @@ end
 local class_mt = {
     -- to prevent use of casual module global variables
     __newindex = function (table, key, val)
-        error('attempt to write to undeclared variable "' .. key .. '"')
+      error('attempt to write to undeclared variable "' .. key .. '"')
     end
 }
 
