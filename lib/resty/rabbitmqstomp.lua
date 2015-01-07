@@ -55,7 +55,7 @@ function _build_frame(self, command, headers, body)
     local frame = {command, EOL}
 
     if body then
-        headers["content-length"] = len(body) + 4
+        headers["content-length"] = len(body)
     end
 
     for key, value in pairs(headers) do
@@ -69,8 +69,6 @@ function _build_frame(self, command, headers, body)
 
     if body then
         insert(frame, body)
-        insert(frame, EOL)
-        insert(frame, EOL)
     end
 
     insert(frame, NULL_BYTE)
@@ -103,7 +101,7 @@ function _login(self)
     
     local headers = {}
     headers["accept-version"] = "1.2"
-    headers["login"] = self.opts.user
+    headers["login"] = self.opts.username
     headers["passcode"] = self.opts.password
     headers["host"] = self.opts.vhost
 
@@ -189,7 +187,6 @@ function receive(self)
     if not data then
         return nil, err
     end
-    data = gsub(data, EOL..EOL, "")
     local idx = find(data, "\n\n", 1)
     return sub(data, idx + 2)
 end
