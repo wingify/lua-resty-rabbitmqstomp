@@ -181,7 +181,7 @@ and the maximal size of the pool every nginx worker process.
 In case of success, returns 1. In case of errors, returns nil with a string describing the error.
 
 Only call this method in the place you would have called the close method
-instead. Calling this method will immediately turn the current redis object into
+instead. Calling this method will immediately turn the current rabbitmq object into
 the closed state. Any subsequent operations other than connect() on the current
 objet will return the closed error.
 
