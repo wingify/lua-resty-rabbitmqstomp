@@ -20,6 +20,7 @@ _VERSION = "0.1"
 
 local mt = { __index = _M }
 
+local LF = "\x0a"
 local EOL = "\x0d\x0a"
 local NULL_BYTE = "\x00"
 local STATE_CONNECTED = 1
@@ -33,7 +34,7 @@ function new(self, opts)
     end
     
     if opts == nil then
-	opts = {username = "guest", password = "guest", vhost = "/"}
+	opts = {username = "guest", password = "guest", vhost = "/", trailing_lf = true}
     end
      
     return setmetatable({ sock = sock, opts = opts}, mt)
@@ -91,7 +92,12 @@ function _receive_frame(self)
     if not sock then
         return nil, "not initialized"
     end
-    local resp = sock:receiveuntil(NULL_BYTE, {inclusive = true})
+    local resp = nil
+    if self.opts.trailing_lf == nil or self.opts.trailing_lf == true then
+        resp = sock:receiveuntil(NULL_BYTE .. LF, {inclusive = true})
+    else
+        resp = sock:receiveuntil(NULL_BYTE, {inclusive = true})
+    end
     local data, err, partial = resp()
     return data, err
 end
