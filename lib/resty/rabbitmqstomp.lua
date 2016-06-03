@@ -107,7 +107,7 @@ function _login(self)
     
     local headers = {}
     headers["accept-version"] = "1.2"
-    headers["login"] = self.opts.user
+    headers["login"] = self.opts.username
     headers["passcode"] = self.opts.password
     headers["host"] = self.opts.vhost
 
