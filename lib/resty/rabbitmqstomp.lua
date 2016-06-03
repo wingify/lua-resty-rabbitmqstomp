@@ -116,8 +116,18 @@ function _login(self)
         return nil, err
     end
 
+    local frame, err = _receive_frame(self)
+    if not frame then
+        return nil, err
+    end
+
+    -- We successfully received a frame, but it was an ERROR frame
+    if sub( frame, 1, len( 'ERROR' ) ) == 'ERROR' then
+        return nil, frame
+    end
+
     self.state = STATE_CONNECTED
-    return _receive_frame(self)
+    return frame
 end
 
 
