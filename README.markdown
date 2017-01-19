@@ -275,10 +275,10 @@ some binding:
 		return nil, err
 	end
 	
-	local mq, info = upstream_pool:connect(mq)
+	local mq, err = mq:connect("127.0.0.1",61613)
 		
 	if not mq then
-		return nil, info
+		return nil, err
 	end
 	
 	local msg = {key="value1", key2="value2"}
