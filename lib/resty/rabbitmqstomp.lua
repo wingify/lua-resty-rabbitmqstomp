@@ -14,10 +14,8 @@ local setmetatable = setmetatable
 local sub = string.sub
 local tcp = ngx.socket.tcp
 
-module(...)
 
-_VERSION = "0.1"
-
+local _M = {_VERSION = "0.2"}
 local mt = { __index = _M }
 
 local LF = "\x0a"
@@ -27,22 +25,22 @@ local STATE_CONNECTED = 1
 local STATE_COMMAND_SENT = 2
 
 
-function new(self, opts)
+local function new(self, opts)
     local sock, err = tcp()
     if not sock then
         return nil, err
     end
-    
+
     if opts == nil then
-	opts = {username = "guest", password = "guest", vhost = "/", trailing_lf = true}
+        opts = {username = "guest", password = "guest", vhost = "/", trailing_lf = true}
     end
-     
+
     return setmetatable({ sock = sock, opts = opts}, mt)
 
 end
 
 
-function set_timeout(self, timeout)
+local function set_timeout(self, timeout)
     local sock = self.sock
     if not sock then
         return nil, "not initialized"
@@ -52,7 +50,7 @@ function set_timeout(self, timeout)
 end
 
 
-function _build_frame(self, command, headers, body)
+local function _build_frame(self, command, headers, body)
     local frame = {command, EOL}
 
     if body then
@@ -78,7 +76,7 @@ function _build_frame(self, command, headers, body)
 end
 
 
-function _send_frame(self, frame)
+local function _send_frame(self, frame)
     local sock = self.sock
     if not sock then
         return nil, "not initialized"
@@ -87,7 +85,7 @@ function _send_frame(self, frame)
 end
 
 
-function _receive_frame(self)
+local function _receive_frame(self)
     local sock = self.sock
     if not sock then
         return nil, "not initialized"
@@ -103,8 +101,8 @@ function _receive_frame(self)
 end
 
 
-function _login(self)
-    
+local function _login(self)
+
     local headers = {}
     headers["accept-version"] = "1.2"
     headers["login"] = self.opts.username
@@ -131,10 +129,10 @@ function _login(self)
 end
 
 
-function _logout(self)
+local function _logout(self)
     local sock = self.sock
     if not sock then
-	self.state = nil
+        self.state = nil
         return nil, "not initialized"
     end
 
@@ -150,7 +148,7 @@ function _logout(self)
 end
 
 
-function connect(self, ...)
+local function connect(self, ...)
 
     local sock = self.sock
 
@@ -159,23 +157,23 @@ function connect(self, ...)
     end
 
     local ok, err = sock:connect(...)
-    
+
     if not ok then
         return nil, "failed to connect: " .. err
     end
-    
+
     local reused = sock:getreusedtimes()
     if reused and reused > 0 then
         self.state = STATE_CONNECTED
         return 1
     end
-    
+
     return _login(self)
 
 end
 
 
-function send(self, msg, headers)
+local function send(self, msg, headers)
     local ok, err = _send_frame(self, _build_frame(self, "SEND", headers, msg))
     if not ok then
         return nil, err
@@ -188,17 +186,17 @@ function send(self, msg, headers)
 end
 
 
-function subscribe(self, headers)
+local function subscribe(self, headers)
     return _send_frame(self, _build_frame(self, "SUBSCRIBE", headers))
 end
 
 
-function unsubscribe(self, headers)
+local function unsubscribe(self, headers)
     return _send_frame(self, _build_frame(self, "UNSUBSCRIBE", headers))
 end
 
 
-function receive(self)
+local function receive(self)
     local data, err = _receive_frame(self)
     if not data then
         return nil, err
@@ -208,7 +206,7 @@ function receive(self)
 end
 
 
-function set_keepalive(self, ...)
+local function set_keepalive(self, ...)
     local sock = self.sock
     if not sock then
         return nil, "not initialized"
@@ -216,7 +214,7 @@ function set_keepalive(self, ...)
 
     if self.state ~= STATE_CONNECTED then
         return nil, "cannot be reused in the current connection state: "
-                    .. (self.state or "nil")
+                .. (self.state or "nil")
     end
 
     self.state = nil
@@ -224,7 +222,7 @@ function set_keepalive(self, ...)
 end
 
 
-function get_reused_times(self)
+local function get_reused_times(self)
     local sock = self.sock
     if not sock then
         return nil, "not initialized"
@@ -234,16 +232,30 @@ function get_reused_times(self)
 end
 
 
-function close(self)
+local function close(self)
     return _logout(self)
 end
+
+
+_M.new = new
+_M.set_timeout = set_timeout
+_M.connect = connect
+_M.send = send
+_M.subscribe = subscribe
+_M.unsubscribe = unsubscribe
+_M.receive = receive
+_M.set_keepalive = set_keepalive
+_M.get_reused_times = get_reused_times
+_M.close = close
 
 
 local class_mt = {
     -- to prevent use of casual module global variables
     __newindex = function (table, key, val)
-      error('attempt to write to undeclared variable "' .. key .. '"')
+        error('attempt to write to undeclared variable "' .. key .. '"')
     end
 }
-
 setmetatable(_M, class_mt)
+
+
+return _M
